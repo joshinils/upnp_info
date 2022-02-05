@@ -5,7 +5,6 @@ import re
 import socket
 import struct
 import sys
-import time
 import xml.etree.ElementTree as ET
 
 import requests
@@ -15,15 +14,16 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
-###
-# Send a multicast message tell all the pnp services that we are looking
-# For them. Keep listening for responses until we hit a 3 second timeout (yes,
-# this could technically cause an infinite loop). Parse the URL out of the
-# 'location' field in the HTTP header and store for later analysis.
-#
-# @return the set of advertised upnp locations
-###
+
 def discover_pnp_locations():
+    ###
+    # Send a multicast message tell all the pnp services that we are looking
+    # For them. Keep listening for responses until we hit a 3 second timeout (yes,
+    # this could technically cause an infinite loop). Parse the URL out of the
+    # 'location' field in the HTTP header and store for later analysis.
+    #
+    # @return the set of advertised upnp locations
+    ###
     locations = set()
     location_regex = re.compile("location:[ ]*(.+)\r\n", re.IGNORECASE)
     ssdpDiscover = ('M-SEARCH * HTTP/1.1\r\n' +
@@ -38,22 +38,23 @@ def discover_pnp_locations():
     sock.settimeout(3)
     try:
         while True:
-            data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
+            data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
             location_result = location_regex.search(data.decode('ASCII'))
-            if location_result and (location_result.group(1) in locations) == False:
+            if location_result and (location_result.group(1) in locations) is False:
                 locations.add(location_result.group(1))
     except socket.error:
         sock.close()
 
     return locations
 
-##
-# Tries to print an element extracted from the XML.
-# @param xml the xml tree we are working on
-# @param xml_name the name of the node we want to pull text from
-# @param print_name the name we want to appear in stdout
-##
+
 def print_attribute(xml, xml_name, print_name):
+    ##
+    # Tries to print an element extracted from the XML.
+    # @param xml the xml tree we are working on
+    # @param xml_name the name of the node we want to pull text from
+    # @param print_name the name we want to appear in stdout
+    ##
     try:
         temp = xml.find(xml_name).text
         print('\t-> %s: %s' % (print_name, temp))
@@ -61,14 +62,16 @@ def print_attribute(xml, xml_name, print_name):
         return
 
     return
-###
-# Loads the XML at each location and prints out the API along with some other
-# interesting data.
-#
-# @param locations a collection of URLs
-# @return igd_ctr (the control address) and igd_service (the service type)
-###
+
+
 def parse_locations(locations):
+    ###
+    # Loads the XML at each location and prints out the API along with some other
+    # interesting data.
+    #
+    # @param locations a collection of URLs
+    # @return igd_ctr (the control address) and igd_service (the service type)
+    ###
     if len(locations) > 0:
         for location in locations:
             print('[+] Loading %s...' % location)
@@ -84,9 +87,10 @@ def parse_locations(locations):
                 print('\t==== XML Attributes ===')
                 try:
                     xmlRoot = ET.fromstring(resp.text)
-                except:
+                except Exception as e:
+                    print("Exception", type(e), e)
                     print('\t[!] Failed XML parsing of %s' % location)
-                    continue;
+                    continue
 
                 print_attribute(xmlRoot, "./{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}deviceType", "Device Type")
                 print_attribute(xmlRoot, "./{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}friendlyName", "Friendly Name")
@@ -121,9 +125,10 @@ def parse_locations(locations):
                     resp = requests.get(serviceURL, timeout=2)
                     try:
                         serviceXML = ET.fromstring(resp.text)
-                    except:
+                    except Exception as e:
+                        print("Exception", type(e), e)
                         print('\t\t\t[!] Failed to parse the response XML')
-                        continue;
+                        continue
 
                     actions = serviceXML.findall(".//*{urn:schemas-upnp-org:service-1-0}action")
                     for action in actions:
@@ -157,15 +162,16 @@ def parse_locations(locations):
 
     return
 
-###
-# Finds the currently existing external to internal port mappings. This logic
-# assumes that the mappings live in a list we can walk. We give up after we
-# reach our first non 200 OK.
-#
-# @param p_url the url to send the SOAPAction to
-# @param p_service the service in charge of this control URI
-###
+
 def find_port_mappings(p_url, p_service):
+    ###
+    # Finds the currently existing external to internal port mappings. This logic
+    # assumes that the mappings live in a list we can walk. We give up after we
+    # reach our first non 200 OK.
+    #
+    # @param p_url the url to send the SOAPAction to
+    # @param p_service the service in charge of this control URI
+    ###
     index = 0
     while True:
         payload = ('<?xml version="1.0" encoding="utf-8" standalone="yes"?>' +
@@ -177,8 +183,9 @@ def find_port_mappings(p_url, p_service):
                    '</s:Body>' +
                    '</s:Envelope>')
 
-        soapActionHeader = { 'Soapaction' : '"' + p_service + '#GetGenericPortMappingEntry' + '"',
-                             'Content-type' : 'text/xml;charset="utf-8"' }
+        soapActionHeader = {'Soapaction': '"' + p_service + '#GetGenericPortMappingEntry' + '"',
+                            'Content-type': 'text/xml;charset="utf-8"'
+                            }
         resp = requests.post(p_url, data=payload, headers=soapActionHeader)
 
         if resp.status_code != 200:
@@ -186,29 +193,31 @@ def find_port_mappings(p_url, p_service):
         else:
             try:
                 xmlRoot = ET.fromstring(resp.text)
-            except:
+            except Exception as e:
+                print("Exception", type(e), e)
                 print('\t\t[!] Failed to parse the response XML')
                 return
 
             externalIP = xmlRoot.find(".//*NewRemoteHost").text
-            if externalIP == None:
+            if externalIP is None:
                 externalIP = '*'
 
             print('\t\t[%s] %s:%s => %s:%s | Desc: %s' % (xmlRoot.find(".//*NewProtocol").text,
-                externalIP, xmlRoot.find(".//*NewExternalPort").text,
-                xmlRoot.find(".//*NewInternalClient").text, xmlRoot.find(".//*NewInternalPort").text,
-                xmlRoot.find(".//*NewPortMappingDescription").text))
+                  externalIP, xmlRoot.find(".//*NewExternalPort").text,
+                  xmlRoot.find(".//*NewInternalClient").text, xmlRoot.find(".//*NewInternalPort").text,
+                  xmlRoot.find(".//*NewPortMappingDescription").text))
 
         index += 1
 
-###
-# Send a 'Browse' request for the top level directory. We will print out the
-# top level containers that we observer. I've limited the count to 10.
-#
-# @param p_url the url to send the SOAPAction to
-# @param p_service the service in charge of this control URI
-###
+
 def find_directories(p_url, p_service):
+    ###
+    # Send a 'Browse' request for the top level directory. We will print out the
+    # top level containers that we observer. I've limited the count to 10.
+    #
+    # @param p_url the url to send the SOAPAction to
+    # @param p_service the service in charge of this control URI
+    ###
     payload = ('<?xml version="1.0" encoding="utf-8" standalone="yes"?>' +
                '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">' +
                '<s:Body>' +
@@ -223,8 +232,9 @@ def find_directories(p_url, p_service):
                '</s:Body>' +
                '</s:Envelope>')
 
-    soapActionHeader = { 'Soapaction' : '"' + p_service + '#Browse' + '"',
-                         'Content-type' : 'text/xml;charset="utf-8"' }
+    soapActionHeader = {'Soapaction': '"' + p_service + '#Browse' + '"',
+                        'Content-type': 'text/xml;charset="utf-8"'
+                        }
 
     resp = requests.post(p_url, data=payload, headers=soapActionHeader)
     if resp.status_code != 200:
@@ -242,18 +252,19 @@ def find_directories(p_url, p_service):
         for container in containers:
             if container.find("./{urn:schemas-upnp-org:metadata-1-0/upnp/}class").text.find("object.container") > -1:
                 print("\t\tStorage Folder: " + container.find("./{http://purl.org/dc/elements/1.1/}title").text)
-    except:
+    except Exception as e:
+        print("Exception", type(e), e)
         print('\t\t[!] Failed to parse the response XML')
 
 
-###
-# Send a 'GetDeviceInfo' request which gets an 'M1' WPS message in return. This
-# message is in a TLV format. We print out some of the types/values.
-#
-# @param p_url the url to send the SOAPAction to
-# @param p_service the service in charge of this control URI
-###
 def find_device_info(p_url, p_service):
+    ###
+    # Send a 'GetDeviceInfo' request which gets an 'M1' WPS message in return. This
+    # message is in a TLV format. We print out some of the types/values.
+    #
+    # @param p_url the url to send the SOAPAction to
+    # @param p_service the service in charge of this control URI
+    ###
     payload = ('<?xml version="1.0" encoding="utf-8" standalone="yes"?>' +
                '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">' +
                '<s:Body>' +
@@ -262,8 +273,9 @@ def find_device_info(p_url, p_service):
                '</s:Body>' +
                '</s:Envelope>')
 
-    soapActionHeader = { 'Soapaction' : '"' + p_service + '#GetDeviceInfo' + '"',
-                         'Content-type' : 'text/xml;charset="utf-8"' }
+    soapActionHeader = {'Soapaction': '"' + p_service + '#GetDeviceInfo' + '"',
+                        'Content-type': 'text/xml;charset="utf-8"'
+                        }
 
     resp = requests.post(p_url, data=payload, headers=soapActionHeader)
     if resp.status_code != 200:
@@ -280,8 +292,8 @@ def find_device_info(p_url, p_service):
     while info:
         try:
             type, length = struct.unpack('!HH', info[:4])
-            value = struct.unpack('!%is'%length, info[4:4+length])[0]
-            info = info[4+length:]
+            value = struct.unpack('!%is' % length, info[4:4 + length])[0]
+            info = info[4 + length:]
 
             if type == 0x1023:
                 print('\t\tModel Name: %s' % value)
@@ -298,16 +310,18 @@ def find_device_info(p_url, p_service):
             elif type == 0x101a:
                 encoded_nonce = base64.b64encode(value)
                 print('\t\tNonce: %s' % encoded_nonce)
-        except:
+        except Exception as e:
+            print("Exception", type(e), e)
             print("Failed TLV parsing")
             break
 
-###
-# Discover upnp services on the LAN and print out information needed to
-# investigate them further. Also prints out port mapping information if it
-# exists
-###
+
 def main(argv):
+    ###
+    # Discover upnp services on the LAN and print out information needed to
+    # investigate them further. Also prints out port mapping information if it
+    # exists
+    ###
     print('[+] Discovering UPnP locations')
     locations = discover_pnp_locations()
     print('[+] Discovery complete')
@@ -319,6 +333,6 @@ def main(argv):
 
     print("[+] Fin.")
 
+
 if __name__ == "__main__":
     main(sys.argv)
-
