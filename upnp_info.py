@@ -16,14 +16,15 @@ except ImportError:
 
 
 def discover_pnp_locations():
-    ###
-    # Send a multicast message tell all the pnp services that we are looking
-    # For them. Keep listening for responses until we hit a 3 second timeout (yes,
-    # this could technically cause an infinite loop). Parse the URL out of the
-    # 'location' field in the HTTP header and store for later analysis.
-    #
-    # @return the set of advertised upnp locations
-    ###
+    """
+    Send a multicast message tell all the pnp services that we are looking
+    For them. Keep listening for responses until we hit a 3 second timeout (yes,
+    this could technically cause an infinite loop). Parse the URL out of the
+    'location' field in the HTTP header and store for later analysis.
+
+    :returns:
+        the set of advertised upnp locations
+    """
     locations = set()
     location_regex = re.compile("location:[ ]*(.+)\r\n", re.IGNORECASE)
     ssdpDiscover = ('M-SEARCH * HTTP/1.1\r\n' +
@@ -49,12 +50,15 @@ def discover_pnp_locations():
 
 
 def print_attribute(xml, xml_name, print_name):
-    ##
-    # Tries to print an element extracted from the XML.
-    # @param xml the xml tree we are working on
-    # @param xml_name the name of the node we want to pull text from
-    # @param print_name the name we want to appear in stdout
-    ##
+    """
+    Tries to print an element extracted from the XML.
+    :param xml:
+        the xml tree we are working on
+    :param xml_name:
+        the name of the node we want to pull text from
+    :param print_name:
+        the name we want to appear in stdout
+    """
     try:
         temp = xml.find(xml_name).text
         print('\t-> %s: %s' % (print_name, temp))
@@ -65,13 +69,15 @@ def print_attribute(xml, xml_name, print_name):
 
 
 def parse_locations(locations):
-    ###
-    # Loads the XML at each location and prints out the API along with some other
-    # interesting data.
-    #
-    # @param locations a collection of URLs
-    # @return igd_ctr (the control address) and igd_service (the service type)
-    ###
+    """
+    Loads the XML at each location and prints out the API along with some other
+    interesting data.
+
+    :param locations:
+        a collection of URLs
+    :returns:
+        igd_ctr (the control address) and igd_service (the service type)
+    """
     if len(locations) > 0:
         for location in locations:
             print('[+] Loading %s...' % location)
@@ -164,14 +170,16 @@ def parse_locations(locations):
 
 
 def find_port_mappings(p_url, p_service):
-    ###
-    # Finds the currently existing external to internal port mappings. This logic
-    # assumes that the mappings live in a list we can walk. We give up after we
-    # reach our first non 200 OK.
-    #
-    # @param p_url the url to send the SOAPAction to
-    # @param p_service the service in charge of this control URI
-    ###
+    """
+    Finds the currently existing external to internal port mappings. This logic
+    assumes that the mappings live in a list we can walk. We give up after we
+    reach our first non 200 OK.
+
+    :param p_url:
+        the url to send the SOAPAction to
+    :param p_service:
+        the service in charge of this control URI
+    """
     index = 0
     while True:
         payload = ('<?xml version="1.0" encoding="utf-8" standalone="yes"?>' +
@@ -211,13 +219,15 @@ def find_port_mappings(p_url, p_service):
 
 
 def find_directories(p_url, p_service):
-    ###
-    # Send a 'Browse' request for the top level directory. We will print out the
-    # top level containers that we observer. I've limited the count to 10.
-    #
-    # @param p_url the url to send the SOAPAction to
-    # @param p_service the service in charge of this control URI
-    ###
+    """
+    Send a 'Browse' request for the top level directory. We will print out the
+    top level containers that we observer. I've limited the count to 10.
+
+    :param p_url:
+        the url to send the SOAPAction to
+    :param p_service:
+        the service in charge of this control URI
+    """
     payload = ('<?xml version="1.0" encoding="utf-8" standalone="yes"?>' +
                '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">' +
                '<s:Body>' +
@@ -258,13 +268,15 @@ def find_directories(p_url, p_service):
 
 
 def find_device_info(p_url, p_service):
-    ###
-    # Send a 'GetDeviceInfo' request which gets an 'M1' WPS message in return. This
-    # message is in a TLV format. We print out some of the types/values.
-    #
-    # @param p_url the url to send the SOAPAction to
-    # @param p_service the service in charge of this control URI
-    ###
+    """
+    Send a 'GetDeviceInfo' request which gets an 'M1' WPS message in return. This
+    message is in a TLV format. We print out some of the types/values.
+
+    :param p_url:
+        the url to send the SOAPAction to
+    :param p_service:
+        the service in charge of this control URI
+    """
     payload = ('<?xml version="1.0" encoding="utf-8" standalone="yes"?>' +
                '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">' +
                '<s:Body>' +
@@ -317,11 +329,10 @@ def find_device_info(p_url, p_service):
 
 
 def main(argv):
-    ###
-    # Discover upnp services on the LAN and print out information needed to
-    # investigate them further. Also prints out port mapping information if it
-    # exists
-    ###
+    """ Discover upnp services on the LAN and print out information needed to
+    investigate them further. Also prints out port mapping information if it
+    exists
+    """
     print('[+] Discovering UPnP locations')
     locations = discover_pnp_locations()
     print('[+] Discovery complete')
