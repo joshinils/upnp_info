@@ -23,7 +23,7 @@ upnp_info.py needs to be able access UDP port 1900. If you aren't getting any re
 upnp_info.py discovers all UPnP servers within multicast range
 
 ```
-$ python upnp_info.py 
+$ python upnp_info.py
 [+] Discovering UPnP locations
 [+] Discovery complete
 [+] 11 locations found:

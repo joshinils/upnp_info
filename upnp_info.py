@@ -1,11 +1,14 @@
+#!/usr/bin/env python3
+
+import base64
 import re
+import socket
+import struct
 import sys
 import time
-import base64
-import struct
-import socket
-import requests
 import xml.etree.ElementTree as ET
+
+import requests
 
 try:
     from urlparse import urlparse
@@ -141,11 +144,11 @@ def parse_locations(locations):
 
                 if cd_ctr and cd_service:
                     print('\t[+] Content browsing available. Looking up base directories...')
-                    find_directories(cd_ctr, cd_service)     
+                    find_directories(cd_ctr, cd_service)
 
                 if wps_ctr and wps_service:
                     print('\t[+] M1 available. Looking up device information...')
-                    find_device_info(wps_ctr, wps_service) 
+                    find_device_info(wps_ctr, wps_service)
 
             except requests.exceptions.ConnectionError:
                 print('[!] Could not load %s' % location)
@@ -295,7 +298,7 @@ def find_device_info(p_url, p_service):
             elif type == 0x101a:
                 encoded_nonce = base64.b64encode(value)
                 print('\t\tNonce: %s' % encoded_nonce)
-        except: 
+        except:
             print("Failed TLV parsing")
             break
 
